@@ -45,7 +45,7 @@ import (
 // to sign the JWTs as well.
 type Middleware struct {
 	Resolver          Resolver
-	ServiceProvider   saml.ServiceProvider
+	ServiceProvider   *saml.ServiceProvider
 	AllowIDPInitiated bool
 	TokenMaxAge       time.Duration
 	ClientState       ClientState
@@ -81,7 +81,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Path == sp.AcsURL.Path {
 		r.ParseForm()
-		assertion, err := sp.ParseResponse(r, m.getPossibleRequestIDs(r))
+		assertion, err := sp.ParseResponse(r, m.getPossibleRequestIDs(r, sp))
 		if err != nil {
 			if parseErr, ok := err.(*saml.InvalidResponseError); ok {
 				sp.Logger.Printf("RESPONSE: ===\n%s\n===\nNOW: %s\nERROR: %s",
@@ -321,8 +321,8 @@ func (m *Middleware) GetAuthorizationToken(r *http.Request) *AuthorizationToken 
 
 	sp, err := m.lookupSP(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		sp.Logger.Printf("ERROR: Unable to find SP: %s", err)
+		return nil
 	}
 
 	tokenClaims := AuthorizationToken{}

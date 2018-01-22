@@ -41,6 +41,11 @@ func New(opts Options, r Resolver) (*Middleware, error) {
 		logr = logger.DefaultLogger
 	}
 
+	tokenMaxAge := opts.CookieMaxAge
+	if opts.CookieMaxAge == 0 {
+		tokenMaxAge = defaultTokenMaxAge
+	}
+
 	m := &Middleware{
 		AllowIDPInitiated: opts.AllowIDPInitiated,
 		TokenMaxAge:       tokenMaxAge,
@@ -53,7 +58,7 @@ func New(opts Options, r Resolver) (*Middleware, error) {
 		metadataURL.Path = metadataURL.Path + "/saml/metadata"
 		acsURL := opts.URL
 		acsURL.Path = acsURL.Path + "/saml/acs"
-		m.ServiceProvider = saml.ServiceProvider{
+		m.ServiceProvider = &saml.ServiceProvider{
 			Key:         opts.Key,
 			Logger:      logr,
 			Certificate: opts.Certificate,
@@ -71,10 +76,10 @@ func New(opts Options, r Resolver) (*Middleware, error) {
 	}
 
 	cookieStore := ClientCookies{
-		ServiceProvider: &m.ServiceProvider,
-		Name:            defaultCookieName,
-		Domain:          opts.URL.Host,
-		Secure:          opts.CookieSecure,
+		//ServiceProvider: &m.ServiceProvider,
+		Name:   defaultCookieName,
+		Domain: opts.URL.Host,
+		Secure: opts.CookieSecure,
 	}
 	m.ClientState = &cookieStore
 	m.ClientToken = &cookieStore
@@ -109,7 +114,7 @@ func (opts Options) getIdmMetadata() (*saml.EntityDescriptor, error) {
 			if i > 10 {
 				return nil, err
 			}
-			logr.Printf("ERROR: %s: %s (will retry)", opts.IDPMetadataURL, err)
+			opts.Logger.Printf("ERROR: %s: %s (will retry)", opts.IDPMetadataURL, err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -137,4 +142,5 @@ func (opts Options) getIdmMetadata() (*saml.EntityDescriptor, error) {
 		}
 		return entity, nil
 	}
+	panic("should not be here")
 }

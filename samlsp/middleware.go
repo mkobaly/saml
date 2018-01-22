@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/crewjam/saml"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/mkobaly/saml"
 )
 
 // Middleware implements middleware than allows a web application

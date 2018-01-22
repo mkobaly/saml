@@ -34,23 +34,26 @@ type Options struct {
 }
 
 // New creates a new Middleware
-func New(opts Options) (*Middleware, error) {
-	metadataURL := opts.URL
-	metadataURL.Path = metadataURL.Path + "/saml/metadata"
-	acsURL := opts.URL
-	acsURL.Path = acsURL.Path + "/saml/acs"
+func New(opts Options, r Resolver) (*Middleware, error) {
+
 	logr := opts.Logger
 	if logr == nil {
 		logr = logger.DefaultLogger
 	}
 
-	tokenMaxAge := opts.CookieMaxAge
-	if opts.CookieMaxAge == 0 {
-		tokenMaxAge = defaultTokenMaxAge
+	m := &Middleware{
+		AllowIDPInitiated: opts.AllowIDPInitiated,
+		TokenMaxAge:       tokenMaxAge,
 	}
 
-	m := &Middleware{
-		ServiceProvider: saml.ServiceProvider{
+	if r != nil {
+		m.Resolver = r
+	} else {
+		metadataURL := opts.URL
+		metadataURL.Path = metadataURL.Path + "/saml/metadata"
+		acsURL := opts.URL
+		acsURL.Path = acsURL.Path + "/saml/acs"
+		m.ServiceProvider = saml.ServiceProvider{
 			Key:         opts.Key,
 			Logger:      logr,
 			Certificate: opts.Certificate,
@@ -58,9 +61,13 @@ func New(opts Options) (*Middleware, error) {
 			AcsURL:      acsURL,
 			IDPMetadata: opts.IDPMetadata,
 			ForceAuthn:  &opts.ForceAuthn,
-		},
-		AllowIDPInitiated: opts.AllowIDPInitiated,
-		TokenMaxAge:       tokenMaxAge,
+		}
+
+		ed, err := opts.getIdmMetadata()
+		if err != nil {
+			return nil, err
+		}
+		m.ServiceProvider.IDPMetadata = ed
 	}
 
 	cookieStore := ClientCookies{
@@ -72,11 +79,10 @@ func New(opts Options) (*Middleware, error) {
 	m.ClientState = &cookieStore
 	m.ClientToken = &cookieStore
 
-	// fetch the IDP metadata if needed.
-	if opts.IDPMetadataURL == nil {
-		return m, nil
-	}
+	return m, nil
+}
 
+func (opts Options) getIdmMetadata() (*saml.EntityDescriptor, error) {
 	c := opts.HTTPClient
 	if c == nil {
 		c = http.DefaultClient
@@ -129,10 +135,6 @@ func New(opts Options) (*Middleware, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		m.ServiceProvider.IDPMetadata = entity
-		return m, nil
+		return entity, nil
 	}
-
-	panic("unreachable")
 }

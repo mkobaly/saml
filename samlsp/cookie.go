@@ -2,6 +2,7 @@ package samlsp
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 
 // ClientState implements client side storage for state.
 type ClientState interface {
-	SetState(w http.ResponseWriter, r *http.Request, id string, value string)
+	SetState(w http.ResponseWriter, r *http.Request, acsPath url.URL, id string, value string)
 	GetStates(r *http.Request) map[string]string
 	GetState(r *http.Request, id string) string
 	DeleteState(w http.ResponseWriter, r *http.Request, id string) error
@@ -27,21 +28,21 @@ const defaultCookieName = "token"
 
 // ClientCookies implements ClientState and ClientToken using cookies.
 type ClientCookies struct {
-	ServiceProvider *saml.ServiceProvider
-	Name            string
-	Domain          string
-	Secure          bool
+	//ServiceProvider *saml.ServiceProvider
+	Name   string
+	Domain string
+	Secure bool
 }
 
 // SetState stores the named state value by setting a cookie.
-func (c ClientCookies) SetState(w http.ResponseWriter, r *http.Request, id string, value string) {
+func (c ClientCookies) SetState(w http.ResponseWriter, r *http.Request, acsPath url.URL, id string, value string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     stateCookiePrefix + id,
 		Value:    value,
 		MaxAge:   int(saml.MaxIssueDelay.Seconds()),
 		HttpOnly: true,
 		Secure:   c.Secure || r.URL.Scheme == "https",
-		Path:     c.ServiceProvider.AcsURL.Path,
+		Path:     acsPath.Path, //c.ServiceProvider.AcsURL.Path,
 	})
 }
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/mkobaly/saml"
+	"github.com/crewjam/saml"
 )
 
 var ErrSPNotFound = errors.New("Service Provider not found")

@@ -65,7 +65,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/mkobaly/saml/samlsp"
+	"github.com/crewjam/saml/samlsp"
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {
